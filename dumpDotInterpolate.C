@@ -13,7 +13,14 @@ template <typename T>
 void writeRaw(std::ofstream& os, const T& v)
 {
     os.write(reinterpret_cast<const char*>(&v), sizeof(T));
-    if (!os) throw std::runtime_error("Failed to write binary data");
+    if (!os) throw std::runtime_error(" === Failed to write binary data === ");
+}
+
+template <typename T>
+void writeRawArrays(std::ofstream& os, const T* ptr, const int32_t count)
+{
+    os.write(reinterpret_cast<const char*>(ptr), count * sizeof(T));
+    if (!os) throw std::runtime_error(" === Failed to write raw array binary data === ");
 }
 
 int main(int argc, char *argv[])
@@ -41,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
     // latestTime is used below
-    volVectorField vsf
+    volVectorField U
     (
         IOobject
         (
@@ -56,7 +63,7 @@ int main(int argc, char *argv[])
 
     // Getting the geometric data from mesh
 
-    const surfaceVectorField& svf = mesh.Sf();
+    const surfaceVectorField& Sf = mesh.Sf();
 
     // Getting the owner and neighbour from the mesh
 
@@ -69,19 +76,20 @@ int main(int argc, char *argv[])
 
 
     // computing OpenFOAM's reference output
-    surfaceScalarField phi_ref = fvc::interpolate(vsf) & svf;
+    surfaceScalarField phi_ref = fvc::interpolate(U) & Sf;
 
     // IO part
 
     // Writing headers
 
-    const std::string filename = runTime.path() + "dot_interpolate_dump.bin";
+    const std::string filename = runTime.path() / "dot_interpolate_dump.bin";
     std::ofstream ostrm(filename, std::ios::binary);
+    if (!ostrm) throw std::runtime_error(" === Failed to open/create file === ");
 
     const uint32_t magicNumber = 0xD07F0A01u;
     const uint8_t formatVersion = 1u;
     const uint8_t elementType = 0u;
-    const int32_t nFaces = static_cast<int32_t>(mesh.nFaces());
+    const int32_t nFaces = static_cast<int32_t>(mesh.nInternalFaces());
     const int32_t nCells = static_cast<int32_t>(mesh.nCells());
 
     writeRaw(ostrm, magicNumber);
@@ -90,22 +98,44 @@ int main(int argc, char *argv[])
     writeRaw(ostrm, nFaces);
     writeRaw(ostrm, nCells);
 
+
     // Writing data
 
-    writeRaw(ostrm, svf.component(0)); // sf.X;
-    writeRaw(ostrm, svf.component(1)); // sf.Y;
-    writeRaw(ostrm, svf.component(2)); // sf.Z;
+    // extracting the cdata to a more permanent structure, as tmp directly like so gets destroyed at the end of the statement, and could be buggy or fragile
+    // writeRawArrays(ostrm, Sf.component(0).ref().primitiveField().cdata()); // sf.X;
 
-    writeRaw(ostrm, lambda); // lambda;
+    tmp<surfaceScalarField> Sfx = Sf.component(0);
+    tmp<surfaceScalarField> Sfy = Sf.component(1);
+    tmp<surfaceScalarField> Sfz = Sf.component(2);
 
-    writeRaw(ostrm, vsf.component(0)); // vsf.x;
-    writeRaw(ostrm, vsf.component(1)); // vsf.y;
-    writeRaw(ostrm, vsf.component(2)); // vsf.z;
+    const scalarField& SfxField = Sfx.ref().primitiveField();
+    const scalarField& SfyField = Sfy.ref().primitiveField();
+    const scalarField& SfzField = Sfz.ref().primitiveField();
 
-    writeRaw(ostrm, owner); // owner
-    writeRaw(ostrm, neighbour); // neighbour
+    writeRawArrays(ostrm, SfxField.cdata(), SfxField.size()); // sf.X;
+    writeRawArrays(ostrm, SfyField.cdata(), SfyField.size()); // sf.Y;
+    writeRawArrays(ostrm, SfzField.cdata(), SfzField.size()); // sf.Z;
 
-    writeRaw(ostrm, phi_ref); // phi_reference (ground truth)
+    writeRawArrays(ostrm, lambda.primitiveField().cdata(), lambda.primitiveField().size()); // lambda;
+
+    // same extraction logic as above for U (velocity vector fields)
+    tmp<surfaceScalarField> Ux = U.component(0);
+    tmp<surfaceScalarField> Uy = U.component(1);
+    tmp<surfaceScalarField> Uz = U.component(2);
+
+    const scalarField& UxField = Ux.ref().primitiveField();
+    const scalarField& UyField = Uy.ref().primitiveField();
+    const scalarField& UzField = Uz.ref().primitiveField();
+
+    writeRawArrays(ostrm, UxField.cdata(), UxField.size()); // vsf.x;
+    writeRawArrays(ostrm, UyField.cdata(), UyField.size()); // vsf.y;
+    writeRawArrays(ostrm, UzField.cdata(), UzField.size()); // vsf.z;
+
+    writeRawArrays(ostrm, owner.cdata(), owner.size()); // owner
+    writeRawArrays(ostrm, neighbour.cdata(), neighbour.size()); // neighbour
+
+    writeRawArrays(ostrm, phi_ref.primitiveField().cdata(), phi_ref.primitiveField().size());
+    // phi_reference (ground truth)
 
 
     return 0;
