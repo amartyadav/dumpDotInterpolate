@@ -23,7 +23,7 @@ add_compile_definitions(
         WM_LABEL_SIZE=32
         WM_DP
         NoRepository
-        OPENFOAM=2306                     # adjust to your OpenFOAM version
+        OPENFOAM=13                    # adjust to your OpenFOAM version
         linux64
 )
 
