@@ -221,8 +221,3 @@ test_harness dot_interpolate_dump.bin
 - **dumpio** — OpenFOAM-free reader library, parses and validates the dump.
 - **test harness** — links `dumpio` and the standalone kernel; runs the
   comparison that validates the kernel against OpenFOAM's output.
-
-## License
-
-See `LICENSE`. (Confirm copyright holder and license terms before publishing —
-this work may be subject to employer IP assignment.)
