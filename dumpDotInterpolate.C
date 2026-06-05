@@ -119,9 +119,10 @@ int main(int argc, char *argv[])
     writeRawArrays(ostrm, lambda.primitiveField().cdata(), lambda.primitiveField().size()); // lambda;
 
     // same extraction logic as above for U (velocity vector fields)
-    tmp<surfaceScalarField> Ux = U.component(0);
-    tmp<surfaceScalarField> Uy = U.component(1);
-    tmp<surfaceScalarField> Uz = U.component(2);
+
+    tmp<volScalarField> Ux = U.component(0);
+    tmp<volScalarField> Uy = U.component(1);
+    tmp<volScalarField> Uz = U.component(2);
 
     const scalarField& UxField = Ux.ref().primitiveField();
     const scalarField& UyField = Uy.ref().primitiveField();
@@ -136,7 +137,6 @@ int main(int argc, char *argv[])
 
     writeRawArrays(ostrm, phi_ref.primitiveField().cdata(), phi_ref.primitiveField().size());
     // phi_reference (ground truth)
-
 
     return 0;
 }
